@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spanish 500 Flashcards</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f7fb;
+      --bg2: #eef1f7;
+      --card: rgba(255,255,255,0.78);
+      --text: #14161a;
+      --muted: #667085;
+      --border: rgba(20,22,26,0.08);
+      --accent: #2563eb;
+      --accent-2: #1d4ed8;
+      --danger: #dc2626;
+      --success: #059669;
+      --shadow: 0 12px 40px rgba(17, 24, 39, 0.08);
+      --radius: 24px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b1020;
+        --bg2: #111827;
+        --card: rgba(17,24,39,0.78);
+        --text: #f5f7fb;
+        --muted: #9aa4b2;
+        --border: rgba(255,255,255,0.08);
+        --accent: #60a5fa;
+        --accent-2: #3b82f6;
+        --danger: #f87171;
+        --success: #34d399;
+        --shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, var(--bg), var(--bg2));
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .top {
+      display: grid;
+      grid-template-columns: 1.2fr 360px;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .panel, .sidebar-card, .flashcard-wrap {
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel { padding: 22px; }
+
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1;
+    }
+
+    .sub {
+      color: var(--muted);
+      margin-top: 10px;
+      max-width: 640px;
+      line-height: 1.5;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(88px, 1fr));
+      gap: 12px;
+      min-width: 320px;
+    }
+
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .metric .label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .metric .value {
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+
+    .sidebar-card { padding: 18px; }
+    .sidebar-card h3 { margin: 0 0 14px; font-size: 1rem; }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .segmented button,
+    .btn,
+    select {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border-radius: 16px;
+      padding: 12px 14px;
+      cursor: pointer;
+      font: inherit;
+      transition: 0.2s ease;
+    }
+
+    .segmented button.active {
+      background: var(--accent);
+      color: white;
+      border-color: transparent;
+    }
+
+    .toggle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px 14px;
+      margin-top: 10px;
+      gap: 12px;
+    }
+
+    .toggle input { transform: scale(1.2); }
+
+    .progress-box {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+    }
+
+    .bar {
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(127,127,127,0.18);
+      overflow: hidden;
+      margin: 8px 0;
+    }
+
+    .bar > div {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      width: 0%;
+    }
+
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 18px;
+    }
+
+    .flashcard-wrap { padding: 18px; }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .icon-buttons { display: flex; gap: 8px; }
+    .icon-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+    }
+
+    .flip-scene { perspective: 1400px; }
+    .flashcard {
+      position: relative;
+      min-height: 420px;
+      border-radius: 28px;
+      border: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(127,127,127,0.08));
+      transform-style: preserve-3d;
+      transition: transform 0.45s ease;
+      cursor: pointer;
+      user-select: none;
+      overflow: hidden;
+    }
+
+    .flashcard.flipped { transform: rotateY(180deg); }
+
+    .face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 30px;
+    }
+
+    .face.back { transform: rotateY(180deg); }
+
+    .face .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .face .word {
+      font-size: clamp(2.1rem, 6vw, 4.7rem);
+      line-height: 1.06;
+      font-weight: 800;
+      word-break: break-word;
+    }
+
+    .hint {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .grade-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .btn.wrong {
+      background: rgba(220,38,38,0.12);
+      color: var(--danger);
+      border-color: rgba(220,38,38,0.2);
+      font-weight: 700;
+    }
+
+    .btn.correct {
+      background: rgba(5,150,105,0.14);
+      color: var(--success);
+      border-color: rgba(5,150,105,0.22);
+      font-weight: 700;
+    }
+
+    .side-col {
+      display: grid;
+      gap: 16px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat {
+      border-radius: 16px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .stat .k { color: var(--muted); font-size: 12px; }
+    .stat .v { margin-top: 6px; font-weight: 700; }
+
+    .stack { display: grid; gap: 10px; }
+    .stack .btn { width: 100%; }
+
+    .tiny { color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
+
+    @media (max-width: 900px) {
+      .top, .main {
+        grid-template-columns: 1fr;
+      }
+      .metrics { grid-template-columns: repeat(2, 1fr); min-width: 0; width: 100%; }
+      .app { padding: 14px; }
+      .panel, .sidebar-card, .flashcard-wrap { border-radius: 24px; }
+      .flashcard { min-height: 360px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="top">
+      <section class="panel">
+        <div class="title-row">
+          <div>
+            <div class="eyebrow" id="layoutMode">Adaptive web app</div>
+            <h1>Spanish 500</h1>
+            <div class="sub">A responsive flashcard app for common Latin American Spanish vocabulary with card flipping, audio pronunciation, adaptive repetition, local progress saving, and light/dark mode support.</div>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="label">Session</div><div class="value" id="sessionStudied">0</div></div>
+            <div class="metric"><div class="label">Accuracy</div><div class="value" id="sessionAccuracy">0%</div></div>
+            <div class="metric"><div class="label">Mastered</div><div class="value" id="masteredCount">0</div></div>
+            <div class="metric"><div class="label">Pool</div><div class="value" id="poolCount">0</div></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="sidebar-card">
+        <h3>Study setup</h3>
+        <div class="tiny" style="margin-bottom:10px;">Direction</div>
+        <div class="segmented" id="directionControls">
+          <button data-direction="es-en">ES → EN</button>
+          <button data-direction="en-es">EN → ES</button>
+          <button data-direction="both">Both</button>
+        </div>
+
+        <div class="tiny" style="margin:14px 0 8px;">Theme</div>
+        <select id="themeSelect">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+
+        <label class="toggle"><span>Auto-play pronunciation</span><input type="checkbox" id="autoAudio" /></label>
+        <label class="toggle"><span>Hide sensitive words</span><input type="checkbox" id="hideExplicit" checked /></label>
+
+        <div class="progress-box">
+          <div class="tiny" style="display:flex;justify-content:space-between;gap:12px;"><span>Mastery progress</span><span id="masteryPct">0%</span></div>
+          <div class="bar"><div id="masteryBar"></div></div>
+          <div class="tiny"><span id="masterySummary">0 of 0 words mastered</span></div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="main">
+      <section class="flashcard-wrap">
+        <div class="card-top">
+          <div class="badges">
+            <div class="badge" id="directionBadge">Spanish → English</div>
+            <div class="badge" id="rankBadge">Rank #1</div>
+            <div class="badge" id="sensitiveBadge" style="display:none;">Sensitive</div>
+          </div>
+          <div class="icon-buttons">
+            <button class="btn icon-btn" id="speakBtn" aria-label="Play audio">🔊</button>
+            <button class="btn icon-btn" id="skipBtn" aria-label="Skip card">↻</button>
+          </div>
+        </div>
+
+        <div class="flip-scene">
+          <div class="flashcard" id="flashcard">
+            <div class="face front">
+              <div class="label">Prompt</div>
+              <div class="word" id="promptText"></div>
+              <div class="hint">Tap the card to flip it.</div>
+            </div>
+            <div class="face back">
+              <div class="label">Answer</div>
+              <div class="word" id="answerText"></div>
+              <div class="hint">Now grade yourself below.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grade-row">
+          <button class="btn wrong" id="wrongBtn">Wrong</button>
+          <button class="btn correct" id="correctBtn">Correct</button>
+        </div>
+      </section>
+
+      <aside class="side-col">
+        <section class="sidebar-card">
+          <h3>Current word stats</h3>
+          <div class="stats-grid">
+            <div class="stat"><div class="k">Seen</div><div class="v" id="seenStat">0</div></div>
+            <div class="stat"><div class="k">Correct</div><div class="v" id="correctStat">0</div></div>
+            <div class="stat"><div class="k">Wrong</div><div class="v" id="wrongStat">0</div></div>
+            <div class="stat"><div class="k">Streak</div><div class="v" id="streakStat">0</div></div>
+            <div class="stat"><div class="k">Due</div><div class="v" id="dueStat">Now</div></div>
+            <div class="stat"><div class="k">Weight</div><div class="v" id="weightStat">1.00</div></div>
+          </div>
+        </section>
+
+        <section class="sidebar-card">
+          <h3>How it adapts</h3>
+          <div class="tiny">Words you miss come back faster. Words you keep getting right fade out and return later. New words get mixed in so the deck keeps expanding naturally.</div>
+        </section>
+
+        <section class="sidebar-card">
+          <h3>Controls</h3>
+          <div class="stack">
+            <button class="btn" id="audioBtn">Play Spanish audio</button>
+            <button class="btn" id="resetBtn">Reset all progress</button>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const RAW_WORDS = `1|de|of
+2|ella|she
+3|que|that / which
+4|el|the
+5|ser|to be
+6|y|and
+7|en|in / on
+8|él|he
+9|estar|to be (temporary)
+10|uno|one
+11|haber|to have
+12|yo|I
+13|por|for / by
+14|tener|to have
+15|se|oneself / itself
+16|ir|to go
+17|tú|you
+18|con|with
+19|qué|what
+20|hacer|to do / make
+21|poder|to be able to
+22|para|for / in order to
+23|del|of the
+24|decir|to say
+25|este|this
+26|todo|all / every
+27|pero|but
+28|si|if
+29|querer|to want / to love
+30|al|to the
+31|sí|yes / oneself
+32|como|like / as
+33|bien|well
+34|más|more
+35|ver|to see
+36|saber|to know
+37|bueno|good
+38|ese|that
+39|aquí|here
+40|nosotros|we
+41|creer|to believe
+42|ya|already
+43|o|or
+44|dar|to give
+45|deber|must / should
+46|mucho|much / many
+47|otro|other
+48|así|like this / so
+49|ahora|now
+50|vez|time / instance
+51|cuando|when
+52|algo|something
+53|dejar|to leave / let
+54|hablar|to speak
+55|pasar|to happen / pass
+56|nada|nothing
+57|cómo|how
+58|solo|only / alone
+59|sentir|to feel
+60|pensar|to think
+61|porque|because
+62|esperar|to hope / wait
+63|usted|you (formal)
+64|día|day
+65|año|year
+66|padre|father
+67|venir|to come
+68|nuestro|our
+69|gracias|thanks
+70|cosa|thing
+71|dos|two
+72|sin|without
+73|sobre|about / over
+74|alguno|some / any
+75|señor|sir / Mr.
+76|mirar|to look
+77|hombre|man
+78|tiempo|time
+79|también|also
+80|mismo|same
+81|necesitar|to need
+82|casa|house / home
+83|llevar|to carry / wear / take
+84|tan|so
+85|entonces|then
+86|encontrar|to find
+87|volver|to return
+88|llamar|to call
+89|parecer|to seem
+90|nuevo|new
+91|mejor|better / best
+92|primero|first
+93|verdad|truth
+94|hasta|until / up to
+95|quién|who
+96|vida|life
+97|nunca|never
+98|tomar|to take / drink
+99|quedar|to stay / remain
+100|grande|big / large
+101|llegar|to arrive
+102|hola|hello
+103|chico|boy / kid
+104|poner|to put
+105|oír|to hear
+106|noche|night
+107|mí|me
+108|hijo|son / child
+109|dónde|where
+110|ni|nor / not even
+111|salir|to leave / go out
+112|favor|favor
+113|gustar|to like
+114|seguir|to follow / continue
+115|amigo|friend
+116|siempre|always
+117|hecho|fact / done
+118|Dios|God
+119|antes|before
+120|desde|from / since
+121|conocer|to know / meet
+122|poco|little / few
+123|ahí|there
+124|alguien|someone
+125|trabajo|work / job
+126|mujer|woman
+127|entre|between / among
+128|después|after
+129|parte|part
+130|mi|my
+131|acuerdo|agreement / okay
+132|escuchar|to listen
+133|momento|moment
+134|matar|to kill
+135|donde|where
+136|seguro|safe / sure
+137|mundo|world
+138|gente|people
+139|niño|child / boy
+140|hora|hour / time
+141|buscar|to look for
+142|problema|problem
+143|Estado|state
+144|lugar|place
+145|nadie|nobody
+146|tal|such
+147|ayudar|to help
+148|perder|to lose
+149|ustedes|you all
+150|persona|person
+151|tipo|type / guy
+152|claro|clear / of course
+153|entender|to understand
+154|menos|less
+155|fuera|outside
+156|acabar|to finish / end
+157|tratar|to treat / try
+158|tres|three
+159|último|last
+160|trabajar|to work
+161|morir|to die
+162|cada|each
+163|dinero|money
+164|mañana|morning / tomorrow
+165|hermano|brother
+166|quien|who
+167|vivir|to live
+168|valer|to be worth
+169|allí|there
+170|hoy|today
+171|luego|then / later
+172|mano|hand
+173|tanto|so much / so many
+174|caso|case
+175|nombre|name
+176|entrar|to enter
+177|forma|shape / form
+178|empezar|to start
+179|conseguir|to get / obtain
+180|pedir|to ask for
+181|intentar|to try
+182|ninguno|none / no one
+183|traer|to bring
+184|pequeño|small
+185|importar|to matter
+186|aún|still / yet
+187|cuenta|account / count
+188|razón|reason
+189|preguntar|to ask
+190|terminar|to finish / end
+191|idea|idea
+192|mamá|mom
+193|único|only / single
+194|mal|badly / wrong
+195|suponer|to suppose / assume
+196|papá|dad
+197|muerto|dead
+198|durante|during
+199|pasado|past
+200|recordar|to remember
+201|semana|week
+202|cierto|certain / true
+203|contra|against
+204|tarde|late / afternoon
+205|segundo|second
+206|cambiar|to change
+207|familia|family
+208|usar|to use
+209|policía|police
+210|comer|to eat
+211|conmigo|with me
+212|sacar|to take out
+213|mientras|while
+214|mantener|to keep / maintain
+215|realmente|really
+216|serio|serious
+217|país|country
+218|contar|to count / tell
+219|minuto|minute
+220|olvidar|to forget
+221|propio|own
+222|pues|well / then
+223|aunque|although
+224|historia|history / story
+225|amor|love
+226|lado|side
+227|junto|together / next to
+228|hacia|toward
+229|manera|way / manner
+230|cabeza|head
+231|punto|point
+232|mayor|older / greater
+233|todavía|still
+234|cualquiera|any / whichever
+235|casi|almost
+236|contigo|with you
+237|mes|month
+238|ciudad|city
+239|importante|important
+240|demasiado|too much / too
+241|preocupar|to worry
+242|poder|power
+243|ganar|to win / earn
+244|cuánto|how much
+245|tío|uncle / guy
+246|puerta|door
+247|palabra|word
+248|ojo|eye
+249|agua|water
+250|medio|middle / half
+251|dentro|inside
+252|abrir|to open
+253|jugar|to play
+254|llamado|called / named
+255|loco|crazy
+256|ocurrir|to happen / occur
+257|alto|tall / high
+258|aquel|that over there
+259|fin|end
+260|pagar|to pay
+261|camino|road / path
+262|esposo|husband
+263|permitir|to allow
+264|recibir|to receive
+265|pregunta|question
+266|leer|to read
+267|significar|to mean
+268|suceder|to happen
+269|muerte|death
+270|millón|million
+271|general|general
+272|dormir|to sleep
+273|realidad|reality
+274|caer|to fall
+275|rápido|fast / quickly
+276|enviar|to send
+277|acercar|to bring closer
+278|equipo|team
+279|cuál|which
+280|ayuda|help
+281|cuerpo|body
+282|jefe|boss / chief
+283|presidente|president
+284|mover|to move
+285|comprar|to buy
+286|supuesto|supposed / assumption
+287|bajo|under / low
+288|gobierno|government
+289|quizá|maybe
+290|comenzar|to begin
+291|joven|young
+292|viejo|old / old man
+293|tierra|earth / land
+294|número|number
+295|cuatro|four
+296|feliz|happy
+297|final|final / end
+298|regresar|to return
+299|grupo|group
+300|guerra|war
+301|cariño|affection / dear
+302|además|besides / in addition
+303|posible|possible
+304|echar|to throw / pour
+305|clase|class
+306|cual|which
+307|arma|weapon
+308|cinco|five
+309|pronto|soon
+310|convertir|to convert / turn into
+311|difícil|difficult
+312|cara|face
+313|sino|but rather
+314|genial|great / awesome
+315|tocar|to touch / play
+316|largo|long
+317|juego|game
+318|escribir|to write
+319|meter|to put in
+320|igual|equal / same
+321|incluso|even
+322|doctor|doctor
+323|corazón|heart
+324|detener|to stop
+325|adiós|goodbye
+326|siquiera|even
+327|ello|it / that
+328|decidir|to decide
+329|suerte|luck
+330|ayer|yesterday
+331|libro|book
+332|correr|to run
+333|según|according to
+334|funcionar|to work / function
+335|vivo|alive / living
+336|luz|light
+337|quizás|perhaps
+338|justo|fair / just / right
+339|miedo|fear
+340|modo|way / mode
+341|relación|relationship
+342|cambio|change
+343|público|public
+344|derecho|right / law
+345|presentar|to present
+346|cerca|near
+347|suficiente|enough
+348|prueba|test / proof
+349|próximo|next
+350|fuerte|strong
+351|existir|to exist
+352|sentido|sense
+353|orden|order
+354|perro|dog
+355|humano|human
+356|vuelta|turn / return
+357|listo|ready / smart
+358|mostrar|to show
+359|subir|to go up
+360|coche|car
+361|servir|to serve
+362|sentar|to sit / seat
+363|salvar|to save
+364|blanco|white
+365|fuerza|strength / force
+366|sistema|system
+367|explicar|to explain
+368|bastante|quite / enough
+369|levantar|to raise / lift
+370|adelante|forward / ahead
+371|mil|thousand
+372|considerar|to consider
+373|paso|step
+374|asegurar|to assure / ensure
+375|aceptar|to accept
+376|quitar|to remove / take off
+377|plan|plan
+378|calle|street
+379|pueblo|town / people
+380|cuidado|care / caution
+381|negro|black
+382|allá|over there
+383|partido|game / party / match
+384|diferente|different
+385|ante|before / in the presence of
+386|fiesta|party
+387|amar|to love
+388|coger|to take / grab
+389|disparar|to shoot
+390|disculpar|to excuse / forgive
+391|pie|foot
+392|beber|to drink
+393|frente|front / forehead
+394|escuela|school
+395|sangre|blood
+396|oportunidad|opportunity
+397|muchacho|boy / young man
+398|real|real
+399|situación|situation
+400|política|politics / policy
+401|ley|law
+402|vender|to sell
+403|teléfono|telephone
+404|malo|bad
+405|extraño|strange / foreign
+406|perdonar|to forgive
+407|arriba|up / above
+408|aparecer|to appear
+409|servicio|service
+410|novio|boyfriend / groom
+411|tampoco|neither / not either
+412|especial|special
+413|casar|to marry
+414|puesto|position / post
+415|dólar|dollar
+416|cuándo|when
+417|duro|hard
+418|nacional|national
+419|recuerdo|memory / souvenir
+420|lograr|to achieve
+421|robar|to steal
+422|seguridad|security
+423|prometer|to promise
+424|enseñar|to teach / show
+425|obra|work / construction / play
+426|descubrir|to discover
+427|andar|to walk / go
+428|fácil|easy
+429|película|movie
+430|cuanto|as much as
+431|lista|list / ready / smart
+432|tras|after / behind
+433|español|Spanish
+434|sonar|to sound / ring
+435|referir|to refer
+436|vino|wine
+437|centro|center
+438|asunto|matter / issue
+439|encantar|to love / delight
+440|embargo|embargo
+441|imaginar|to imagine
+442|información|information
+443|habitación|room
+444|aprender|to learn
+445|falta|lack / absence
+446|cielo|sky
+447|seis|six
+448|realizar|to carry out
+449|negocio|business
+450|sueño|dream / sleepiness
+451|atrás|behind / back
+452|social|social
+453|capitán|captain
+454|comida|food / meal
+455|bebé|baby
+456|libre|free
+457|voz|voice
+458|foto|photo
+459|abajo|down / below
+460|par|pair
+461|paz|peace
+462|confiar|to trust
+463|callar|to be quiet
+464|culpa|guilt / blame
+465|cerrar|to close
+466|ofrecer|to offer
+467|noticia|news
+468|bajar|to go down
+469|desear|to wish / desire
+470|música|music
+471|diablo|devil
+472|resto|rest / remainder
+473|siguiente|following / next
+474|cuidar|to take care of
+475|médico|doctor
+476|carta|letter / menu
+477|preparar|to prepare
+478|don|Mr. / honorific
+479|correcto|correct
+480|programa|program
+481|sitio|place / site
+482|campo|field / countryside
+483|elegir|to choose
+484|exactamente|exactly
+485|parar|to stop
+486|aire|air
+487|señora|lady / Mrs.
+488|esperanza|hope
+489|imagen|image
+490|risa|laugh / laughter
+491|tema|theme / topic
+492|norte|north
+493|sur|south
+494|izquierdo|left
+495|derecha|right side
+496|verdadero|true / real
+497|simple|simple
+498|nivel|level
+499|edad|age
+500|precio|price`;
+
+    const EXPLICIT = new Set(["mierda", "diablo", "disparar", "arma", "robar", "matar", "sangre"]);
+    const PROGRESS_KEY = "spanish500-progress-html-v1";
+    const SETTINGS_KEY = "spanish500-settings-html-v1";
+
+    const words = RAW_WORDS.split("\n").map(line => {
+      const [rank, spanish, english] = line.split("|");
+      return { id: Number(rank), rank: Number(rank), spanish, english, explicit: EXPLICIT.has(spanish) };
+    });
+
+    const state = {
+      progress: load(PROGRESS_KEY, {}),
+      settings: load(SETTINGS_KEY, { direction: "both", hideExplicit: true, autoAudio: false, theme: "system" }),
+      session: { studied: 0, correct: 0, wrong: 0 },
+      current: null,
+      currentStats: null,
+      currentWeight: 1,
+      currentPack: null,
+      revealed: false,
+    };
+
+    function load(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function save() {
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify(state.progress));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+    }
+
+    function defaultStats() {
+      return { seen: 0, correct: 0, wrong: 0, streak: 0, dueAt: Date.now(), lastSeenAt: 0 };
+    }
+
+    function filteredWords() {
+      return words.filter(w => !(state.settings.hideExplicit && w.explicit));
+    }
+
+    function getPrompt(word) {
+      if (state.settings.direction === "es-en") {
+        return { label: "Spanish → English", prompt: word.spanish, answer: word.english, pronounce: word.spanish };
+      }
+      if (state.settings.direction === "en-es") {
+        return { label: "English → Spanish", prompt: word.english, answer: word.spanish, pronounce: word.spanish };
+      }
+      return Math.random() > 0.5
+        ? { label: "Spanish → English", prompt: word.spanish, answer: word.english, pronounce: word.spanish }
+        : { label: "English → Spanish", prompt: word.english, answer: word.spanish, pronounce: word.spanish };
+    }
+
+    function computeDeck() {
+      const now = Date.now();
+      return filteredWords().map(word => {
+        const stats = { ...defaultStats(), ...(state.progress[word.id] || {}) };
+        const overdueBoost = now >= stats.dueAt ? 1.6 : 0.35;
+        const weaknessBoost = 1 + stats.wrong * 1.8 + Math.max(0, stats.seen - stats.correct) * 0.35;
+        const noveltyBoost = stats.seen === 0 ? 2.2 : 1;
+        const masteryPenalty = Math.max(0.25, 1 - stats.streak * 0.08);
+        const rankBoost = 1 + (500 - word.rank) / 1200;
+        const weight = overdueBoost * weaknessBoost * noveltyBoost * masteryPenalty * rankBoost;
+        return { word, stats, weight };
+      });
+    }
+
+    function pickWeighted(items) {
+      const total = items.reduce((sum, item) => sum + item.weight, 0);
+      let r = Math.random() * total;
+      for (const item of items) {
+        r -= item.weight;
+        if (r <= 0) return item;
+      }
+      return items[0];
+    }
+
+    function nextCard() {
+      const deck = computeDeck();
+      const chosen = pickWeighted(deck);
+      state.current = chosen.word;
+      state.currentStats = chosen.stats;
+      state.currentWeight = chosen.weight;
+      state.currentPack = getPrompt(chosen.word);
+      state.revealed = false;
+      render();
+      if (state.settings.autoAudio) setTimeout(() => speak(state.currentPack.pronounce), 120);
+    }
+
+    function gradeCard(isCorrect) {
+      const now = Date.now();
+      const id = state.current.id;
+      const prev = { ...defaultStats(), ...(state.progress[id] || {}) };
+      const next = { ...prev, seen: prev.seen + 1, lastSeenAt: now };
+
+      if (isCorrect) {
+        next.correct += 1;
+        next.streak += 1;
+        const hours = Math.max(4, (prev.streak + 1) * 6);
+        next.dueAt = now + hours * 60 * 60 * 1000;
+        state.session.correct += 1;
+      } else {
+        next.wrong += 1;
+        next.streak = 0;
+        next.dueAt = now + 4 * 60 * 1000;
+        state.session.wrong += 1;
+      }
+
+      state.session.studied += 1;
+      state.progress[id] = next;
+      save();
+      nextCard();
+    }
+
+    function masteryStats() {
+      const pool = filteredWords();
+      const mastered = pool.filter(w => ((state.progress[w.id] || {}).streak || 0) >= 4).length;
+      return { mastered, total: pool.length, pct: Math.round((mastered / Math.max(1, pool.length)) * 100) };
+    }
+
+    function accuracy() {
+      const total = state.session.correct + state.session.wrong;
+      return total ? Math.round((state.session.correct / total) * 100) : 0;
+    }
+
+    function formatDue(ts) {
+      return ts <= Date.now() ? "Now" : "Later";
+    }
+
+    function speak(text) {
+      if (!("speechSynthesis" in window)) return;
+      const utter = new SpeechSynthesisUtterance(text);
+      const voices = speechSynthesis.getVoices();
+      const preferred = voices.find(v => /es-MX/i.test(v.lang)) || voices.find(v => /^es/i.test(v.lang));
+      if (preferred) utter.voice = preferred;
+      utter.lang = preferred?.lang || "es-MX";
+      utter.rate = 0.92;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utter);
+    }
+
+    function applyTheme() {
+      document.documentElement.style.colorScheme = state.settings.theme === "system"
+        ? "light dark"
+        : state.settings.theme;
+      if (state.settings.theme === "light") document.documentElement.classList.add("force-light");
+      else document.documentElement.classList.remove("force-light");
+      if (state.settings.theme === "dark") document.documentElement.classList.add("force-dark");
+      else document.documentElement.classList.remove("force-dark");
+    }
+
+    function render() {
+      applyTheme();
+      const m = masteryStats();
+      const layoutText = window.innerWidth <= 900 ? "Phone layout active" : "Desktop layout active";
+      document.getElementById("layoutMode").textContent = layoutText;
+      document.getElementById("sessionStudied").textContent = state.session.studied;
+      document.getElementById("sessionAccuracy").textContent = accuracy() + "%";
+      document.getElementById("masteredCount").textContent = m.mastered;
+      document.getElementById("poolCount").textContent = m.total;
+      document.getElementById("masteryPct").textContent = m.pct + "%";
+      document.getElementById("masteryBar").style.width = m.pct + "%";
+      document.getElementById("masterySummary").textContent = `${m.mastered} of ${m.total} words mastered`;
+
+      document.querySelectorAll("#directionControls button").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.direction === state.settings.direction);
+      });
+      document.getElementById("themeSelect").value = state.settings.theme;
+      document.getElementById("autoAudio").checked = state.settings.autoAudio;
+      document.getElementById("hideExplicit").checked = state.settings.hideExplicit;
+
+      document.getElementById("directionBadge").textContent = state.currentPack.label;
+      document.getElementById("rankBadge").textContent = `Rank #${state.current.rank}`;
+      document.getElementById("sensitiveBadge").style.display = state.current.explicit ? "inline-block" : "none";
+      document.getElementById("promptText").textContent = state.currentPack.prompt;
+      document.getElementById("answerText").textContent = state.currentPack.answer;
+      document.getElementById("flashcard").classList.toggle("flipped", state.revealed);
+
+      document.getElementById("seenStat").textContent = state.currentStats.seen;
+      document.getElementById("correctStat").textContent = state.currentStats.correct;
+      document.getElementById("wrongStat").textContent = state.currentStats.wrong;
+      document.getElementById("streakStat").textContent = state.currentStats.streak;
+      document.getElementById("dueStat").textContent = formatDue(state.currentStats.dueAt);
+      document.getElementById("weightStat").textContent = state.currentWeight.toFixed(2);
+    }
+
+    document.getElementById("flashcard").addEventListener("click", () => {
+      state.revealed = !state.revealed;
+      render();
+    });
+    document.getElementById("wrongBtn").addEventListener("click", () => gradeCard(false));
+    document.getElementById("correctBtn").addEventListener("click", () => gradeCard(true));
+    document.getElementById("skipBtn").addEventListener("click", nextCard);
+    document.getElementById("speakBtn").addEventListener("click", () => speak(state.currentPack.pronounce));
+    document.getElementById("audioBtn").addEventListener("click", () => speak(state.currentPack.pronounce));
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      if (!confirm("Reset all progress?")) return;
+      state.progress = {};
+      state.session = { studied: 0, correct: 0, wrong: 0 };
+      save();
+      nextCard();
+    });
+    document.getElementById("themeSelect").addEventListener("change", e => {
+      state.settings.theme = e.target.value;
+      save();
+      render();
+    });
+    document.getElementById("autoAudio").addEventListener("change", e => {
+      state.settings.autoAudio = e.target.checked;
+      save();
+    });
+    document.getElementById("hideExplicit").addEventListener("change", e => {
+      state.settings.hideExplicit = e.target.checked;
+      save();
+      nextCard();
+    });
+    document.querySelectorAll("#directionControls button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        state.settings.direction = btn.dataset.direction;
+        save();
+        nextCard();
+      });
+    });
+    window.addEventListener("resize", render);
+    speechSynthesis.onvoiceschanged = () => {};
+
+    nextCard();
+  </script>
+</body>
+</html>
