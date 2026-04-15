@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Volume2, RotateCcw, CheckCircle2, Trophy, Flame, BarChart3 } from "lucide-react";
 
 const RAW_WORDS = `1|de|of
 2|ella|she
@@ -502,12 +503,43 @@ const RAW_WORDS = `1|de|of
 499|edad|age
 500|precio|price`;
 
-const STORAGE_KEY = "spanish-flashcards-v2";
-const SETTINGS_KEY = "spanish-flashcards-settings-v2";
+const STORAGE_KEY = "spanish-flashcards-vite-v1";
+const SETTINGS_KEY = "spanish-flashcards-settings-vite-v1";
 const DEFAULT_SETTINGS = {
   direction: "both",
   autoAudio: false,
   theme: "system",
+};
+
+const themeValues = {
+  light: {
+    page: "#f6f7fb",
+    card: "rgba(255,255,255,0.82)",
+    cardSolid: "#ffffff",
+    text: "#111827",
+    muted: "#6b7280",
+    border: "rgba(17,24,39,0.08)",
+    soft: "#eef2ff",
+    accent: "#4f46e5",
+    accentText: "#ffffff",
+    secondary: "#f3f4f6",
+    danger: "#dc2626",
+    shadow: "0 20px 50px rgba(15, 23, 42, 0.08)",
+  },
+  dark: {
+    page: "#0b1020",
+    card: "rgba(17,24,39,0.82)",
+    cardSolid: "#111827",
+    text: "#f3f4f6",
+    muted: "#9ca3af",
+    border: "rgba(255,255,255,0.08)",
+    soft: "#182033",
+    accent: "#818cf8",
+    accentText: "#111827",
+    secondary: "#1f2937",
+    danger: "#ef4444",
+    shadow: "0 20px 50px rgba(0, 0, 0, 0.32)",
+  },
 };
 
 const parseWords = () =>
@@ -601,13 +633,42 @@ function formatDueLabel(timestamp) {
   return `${days}d`;
 }
 
+function useResolvedTheme(theme) {
+  const [resolvedTheme, setResolvedTheme] = useState("light");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const dark = theme === "dark" || (theme === "system" && media.matches);
+      setResolvedTheme(dark ? "dark" : "light");
+      document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      document.body.style.margin = "0";
+      document.body.style.background = dark ? themeValues.dark.page : themeValues.light.page;
+      document.body.style.color = dark ? themeValues.dark.text : themeValues.light.text;
+      document.body.style.fontFamily = 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    };
+    apply();
+    const handleChange = () => apply();
+    if (media.addEventListener) {
+      media.addEventListener("change", handleChange);
+      return () => media.removeEventListener("change", handleChange);
+    }
+    media.addListener(handleChange);
+    return () => media.removeListener(handleChange);
+  }, [theme]);
+
+  return resolvedTheme;
+}
+
 function App() {
   const [progress, setProgress] = useState(() => getStoredValue(STORAGE_KEY, {}));
   const [settings, setSettings] = useState(() => ({ ...DEFAULT_SETTINGS, ...getStoredValue(SETTINGS_KEY, DEFAULT_SETTINGS) }));
   const [revealed, setRevealed] = useState(false);
   const [cardSeed, setCardSeed] = useState(0);
   const [promptSeed, setPromptSeed] = useState(0);
-  const [resolvedTheme, setResolvedTheme] = useState("light");
+  const resolvedTheme = useResolvedTheme(settings.theme);
+  const theme = themeValues[resolvedTheme];
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -618,24 +679,6 @@ function App() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }, [settings]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const applyTheme = () => {
-      const dark = settings.theme === "dark" || (settings.theme === "system" && media.matches);
-      setResolvedTheme(dark ? "dark" : "light");
-      document.documentElement.classList.toggle("dark", dark);
-    };
-    applyTheme();
-    const handleChange = () => applyTheme();
-    if (media.addEventListener) {
-      media.addEventListener("change", handleChange);
-      return () => media.removeEventListener("change", handleChange);
-    }
-    media.addListener(handleChange);
-    return () => media.removeListener(handleChange);
-  }, [settings.theme]);
 
   const overallStats = useMemo(() => {
     return words.reduce(
@@ -739,220 +782,416 @@ function App() {
     advanceCard();
   };
 
+  const sectionTitleStyle = {
+    fontSize: 16,
+    fontWeight: 700,
+    margin: 0,
+  };
+
   return (
-    <div className={resolvedTheme === "dark" ? "dark min-h-screen bg-gradient-to-br from-background via-background to-muted/40 text-foreground" : "min-h-screen bg-gradient-to-br from-background via-background to-muted/40 text-foreground"}>
-      <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
-        <div className="mb-6 grid gap-4 lg:grid-cols-[1.2fr_360px]">
-          <div className="rounded-3xl border bg-card/70 p-5 shadow-sm backdrop-blur">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-semibold tracking-tight">Spanish 500</h1>
-              </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <Metric icon={<Flame className="h-4 w-4" />} label="Reviewed" value={overallStats.reviewed} />
-                <Metric icon={<CheckCircle2 className="h-4 w-4" />} label="Accuracy" value={`${accuracyPct}%`} />
-                <Metric icon={<Trophy className="h-4 w-4" />} label="Mastered" value={overallStats.mastered} />
-                <Metric icon={<BarChart3 className="h-4 w-4" />} label="Studied" value={overallStats.studied} />
+    <div
+      style={{
+        minHeight: "100vh",
+        background: `radial-gradient(circle at top left, ${theme.soft} 0%, ${theme.page} 42%, ${theme.page} 100%)`,
+        color: theme.text,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 1280,
+          margin: "0 auto",
+          padding: 16,
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1.2fr) minmax(280px, 360px)",
+            gap: 16,
+            marginBottom: 24,
+          }}
+          className="top-grid"
+        >
+          <div style={panelStyle(theme, 20)}>
+            <div style={{ display: "flex", gap: 16, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+              <h1 style={{ margin: 0, fontSize: 34, lineHeight: 1.1, fontWeight: 800 }}>Spanish 500</h1>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(88px, 1fr))", gap: 8 }} className="metric-grid">
+                <Metric icon={<Flame size={16} />} label="Reviewed" value={overallStats.reviewed} theme={theme} />
+                <Metric icon={<CheckCircle2 size={16} />} label="Accuracy" value={`${accuracyPct}%`} theme={theme} />
+                <Metric icon={<Trophy size={16} />} label="Mastered" value={overallStats.mastered} theme={theme} />
+                <Metric icon={<BarChart3 size={16} />} label="Studied" value={overallStats.studied} theme={theme} />
               </div>
             </div>
           </div>
 
-          <Card className="rounded-3xl border shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Study setup</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
+          <div style={panelStyle(theme, 24)}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <h2 style={sectionTitleStyle}>Study setup</h2>
               <div>
-                <label className="mb-2 block text-muted-foreground">Direction</label>
-                <Tabs value={settings.direction} onValueChange={(direction) => setSettings((state) => ({ ...state, direction }))}>
-                  <TabsList className="grid w-full grid-cols-3 rounded-2xl">
-                    <TabsTrigger value="es-en">ES → EN</TabsTrigger>
-                    <TabsTrigger value="en-es">EN → ES</TabsTrigger>
-                    <TabsTrigger value="both">Both</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                <div style={labelStyle(theme)}>Direction</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                  <TabButton active={settings.direction === "es-en"} onClick={() => setSettings((state) => ({ ...state, direction: "es-en" }))} theme={theme}>ES → EN</TabButton>
+                  <TabButton active={settings.direction === "en-es"} onClick={() => setSettings((state) => ({ ...state, direction: "en-es" }))} theme={theme}>EN → ES</TabButton>
+                  <TabButton active={settings.direction === "both"} onClick={() => setSettings((state) => ({ ...state, direction: "both" }))} theme={theme}>Both</TabButton>
+                </div>
               </div>
 
               <div>
-                <label className="mb-2 block text-muted-foreground">Theme</label>
-                <Select value={settings.theme} onValueChange={(theme) => setSettings((state) => ({ ...state, theme }))}>
-                  <SelectTrigger className="rounded-2xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="system">System</SelectItem>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="dark">Dark</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div style={labelStyle(theme)}>Theme</div>
+                <select
+                  value={settings.theme}
+                  onChange={(event) => setSettings((state) => ({ ...state, theme: event.target.value }))}
+                  style={selectStyle(theme)}
+                >
+                  <option value="system">System</option>
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
               </div>
 
               <ToggleRow
                 label="Auto-play pronunciation"
-                icon={<Volume2 className="h-4 w-4" />}
+                icon={<Volume2 size={16} />}
                 checked={settings.autoAudio}
                 onCheckedChange={(autoAudio) => setSettings((state) => ({ ...state, autoAudio }))}
+                theme={theme}
               />
 
-              <div className="rounded-2xl bg-muted/60 p-3">
-                <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+              <div style={{ borderRadius: 18, padding: 14, background: theme.soft, border: `1px solid ${theme.border}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: theme.muted, marginBottom: 8 }}>
                   <span>Mastery progress</span>
                   <span>{masteryPct}%</span>
                 </div>
-                <Progress value={masteryPct} className="h-2" />
-                <div className="mt-2 text-xs text-muted-foreground">
+                <ProgressBar value={masteryPct} theme={theme} />
+                <div style={{ marginTop: 8, fontSize: 12, color: theme.muted }}>
                   {overallStats.mastered} of {words.length} words are currently in the mastered bucket.
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <Card className="rounded-[28px] border shadow-sm">
-            <CardContent className="p-4 md:p-6">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`${currentCard.id}-${promptPack.label}-${promptSeed}`}
-                  initial={{ opacity: 0, y: 12, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -12, scale: 0.98 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-5"
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) 320px",
+            gap: 24,
+          }}
+          className="main-grid"
+        >
+          <div style={panelStyle(theme, 28)}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`${currentCard.id}-${promptPack.label}-${promptSeed}`}
+                initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+                style={{ display: "flex", flexDirection: "column", gap: 20 }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <Pill theme={theme} variant="secondary">{promptPack.label}</Pill>
+                    <Pill theme={theme} variant="outline">Rank #{currentCard.rank}</Pill>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <IconButton onClick={() => speak(promptPack.pronounce)} theme={theme} ariaLabel="Play audio">
+                      <Volume2 size={16} />
+                    </IconButton>
+                    <IconButton onClick={skipCard} theme={theme} ariaLabel="Skip card">
+                      <RotateCcw size={16} />
+                    </IconButton>
+                  </div>
+                </div>
+
+                <motion.button
+                  type="button"
+                  onClick={() => setRevealed((value) => !value)}
+                  whileTap={{ scale: 0.995 }}
+                  style={{
+                    position: "relative",
+                    minHeight: 380,
+                    width: "100%",
+                    borderRadius: 28,
+                    border: `1px solid ${theme.border}`,
+                    background: `linear-gradient(135deg, ${theme.cardSolid} 0%, ${theme.soft} 100%)`,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06)`,
+                    padding: 0,
+                    color: theme.text,
+                    cursor: "pointer",
+                  }}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="rounded-full px-3 py-1">
-                        {promptPack.label}
-                      </Badge>
-                      <Badge variant="outline" className="rounded-full px-3 py-1">
-                        Rank #{currentCard.rank}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="icon" className="rounded-2xl" onClick={() => speak(promptPack.pronounce)}>
-                        <Volume2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" className="rounded-2xl" onClick={skipCard}>
-                        <RotateCcw className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <motion.button
-                    type="button"
-                    onClick={() => setRevealed((value) => !value)}
-                    whileTap={{ scale: 0.995 }}
-                    className="relative min-h-[320px] w-full rounded-[28px] border bg-gradient-to-br from-card to-muted/40 p-0 text-left shadow-inner md:min-h-[380px]"
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 16,
+                      right: 16,
+                      zIndex: 2,
+                      borderRadius: 999,
+                      border: `1px solid ${theme.border}`,
+                      background: theme.card,
+                      padding: "6px 12px",
+                      fontSize: 12,
+                      color: theme.muted,
+                      backdropFilter: "blur(10px)",
+                    }}
                   >
-                    <div className="absolute right-4 top-4 z-10 rounded-full border bg-background/80 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
-                      {revealed ? "Tap to flip back" : "Tap to flip"}
-                    </div>
-                    <AnimatePresence mode="wait" initial={false}>
-                      <motion.div
-                        key={revealed ? "back" : "front"}
-                        initial={{ rotateY: revealed ? -90 : 90, opacity: 0 }}
-                        animate={{ rotateY: 0, opacity: 1 }}
-                        exit={{ rotateY: revealed ? 90 : -90, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="flex min-h-[320px] flex-col items-center justify-center p-8 text-center md:min-h-[380px] md:p-12"
-                        style={{ transformStyle: "preserve-3d" }}
-                      >
-                        <div className="mb-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                          {revealed ? "Translation" : "Prompt"}
-                        </div>
-                        <div className="text-4xl font-semibold tracking-tight md:text-6xl">
-                          {revealed ? promptPack.answer : promptPack.prompt}
-                        </div>
-                        <div className="mt-4 text-sm text-muted-foreground">
-                          {revealed ? `Pronunciation target: ${currentCard.spanish}` : "Tap the card to reveal the translation."}
-                        </div>
-                      </motion.div>
-                    </AnimatePresence>
-                  </motion.button>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Button variant="destructive" className="rounded-2xl" disabled={!revealed} onClick={() => gradeCard("wrong")}>
-                      Wrong
-                    </Button>
-                    <Button className="rounded-2xl" disabled={!revealed} onClick={() => gradeCard("correct")}>
-                      Correct
-                    </Button>
+                    {revealed ? "Tap to flip back" : "Tap to flip"}
                   </div>
-                </motion.div>
-              </AnimatePresence>
-            </CardContent>
-          </Card>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                      key={revealed ? "back" : "front"}
+                      initial={{ rotateY: revealed ? -90 : 90, opacity: 0 }}
+                      animate={{ rotateY: 0, opacity: 1 }}
+                      exit={{ rotateY: revealed ? 90 : -90, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      style={{
+                        minHeight: 380,
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        textAlign: "center",
+                        padding: 48,
+                        gap: 12,
+                      }}
+                    >
+                      <div style={{ fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: theme.muted }}>
+                        {revealed ? "Translation" : "Prompt"}
+                      </div>
+                      <div style={{ fontSize: 48, lineHeight: 1.05, fontWeight: 800 }} className="card-word">
+                        {revealed ? promptPack.answer : promptPack.prompt}
+                      </div>
+                      <div style={{ marginTop: 4, fontSize: 14, color: theme.muted }}>
+                        {revealed ? `Pronunciation target: ${currentCard.spanish}` : "Tap the card to reveal the translation."}
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                </motion.button>
 
-          <div className="space-y-6">
-            <Card className="rounded-3xl border shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Progress stats</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-3 text-sm">
-                <Stat label="Reviewed" value={overallStats.reviewed} />
-                <Stat label="Correct" value={overallStats.correct} />
-                <Stat label="Wrong" value={overallStats.wrong} />
-                <Stat label="Current streak" value={currentWordStats.streak} />
-                <Stat label="Current ease" value={currentWordStats.ease.toFixed(2)} />
-                <Stat label="Current due" value={formatDueLabel(currentWordStats.dueAt)} />
-              </CardContent>
-            </Card>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }} className="grade-grid">
+                  <ActionButton variant="danger" disabled={!revealed} onClick={() => gradeCard("wrong")} theme={theme}>Wrong</ActionButton>
+                  <ActionButton disabled={!revealed} onClick={() => gradeCard("correct")} theme={theme}>Correct</ActionButton>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
 
-            <Card className="rounded-3xl border shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Controls</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full rounded-2xl" onClick={() => speak(currentCard.spanish)}>
-                  <Volume2 className="mr-2 h-4 w-4" /> Play Spanish audio
-                </Button>
-                <Button variant="outline" className="w-full rounded-2xl" onClick={skipCard}>
-                  Skip this card
-                </Button>
-                <Button variant="destructive" className="w-full rounded-2xl" onClick={resetProgress}>
-                  Reset all progress
-                </Button>
-              </CardContent>
-            </Card>
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            <div style={panelStyle(theme, 24)}>
+              <h2 style={{ ...sectionTitleStyle, marginBottom: 16 }}>Progress stats</h2>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+                <Stat label="Reviewed" value={overallStats.reviewed} theme={theme} />
+                <Stat label="Correct" value={overallStats.correct} theme={theme} />
+                <Stat label="Wrong" value={overallStats.wrong} theme={theme} />
+                <Stat label="Current streak" value={currentWordStats.streak} theme={theme} />
+                <Stat label="Current ease" value={currentWordStats.ease.toFixed(2)} theme={theme} />
+                <Stat label="Current due" value={formatDueLabel(currentWordStats.dueAt)} theme={theme} />
+              </div>
+            </div>
+
+            <div style={panelStyle(theme, 24)}>
+              <h2 style={{ ...sectionTitleStyle, marginBottom: 16 }}>Controls</h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <ActionButton variant="secondary" onClick={() => speak(currentCard.spanish)} theme={theme}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Volume2 size={16} /> Play Spanish audio</span>
+                </ActionButton>
+                <ActionButton variant="secondary" onClick={skipCard} theme={theme}>Skip this card</ActionButton>
+                <ActionButton variant="danger" onClick={resetProgress} theme={theme}>Reset all progress</ActionButton>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <style>{`
+        * { box-sizing: border-box; }
+        button, select { font: inherit; }
+        @media (max-width: 1024px) {
+          .top-grid, .main-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 768px) {
+          .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; width: 100%; }
+          .grade-grid { grid-template-columns: 1fr !important; }
+          .card-word { font-size: 38px !important; }
+        }
+      `}</style>
     </div>
   );
 }
 
-function Metric({ icon, label, value }) {
-  return (
-    <div className="rounded-2xl border bg-background/70 p-3">
-      <div className="mb-2 flex items-center gap-2 text-muted-foreground">
-        {icon}
-        <span className="text-xs">{label}</span>
-      </div>
-      <div className="text-lg font-semibold">{value}</div>
-    </div>
-  );
+function panelStyle(theme, radius) {
+  return {
+    borderRadius: radius,
+    border: `1px solid ${theme.border}`,
+    background: theme.card,
+    boxShadow: theme.shadow,
+    backdropFilter: "blur(12px)",
+    padding: 20,
+  };
 }
 
-function Stat({ label, value }) {
-  return (
-    <div className="rounded-2xl bg-muted/50 p-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 text-base font-semibold">{value}</div>
-    </div>
-  );
+function labelStyle(theme) {
+  return {
+    marginBottom: 8,
+    fontSize: 13,
+    color: theme.muted,
+  };
 }
 
-function ToggleRow({ label, icon, checked, onCheckedChange }) {
+function Metric({ icon, label, value, theme }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border p-3">
-      <div className="flex items-center gap-2 text-sm">
+    <div style={{ borderRadius: 18, border: `1px solid ${theme.border}`, background: theme.cardSolid, padding: 12 }}>
+      <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8, color: theme.muted, fontSize: 12 }}>
         {icon}
         <span>{label}</span>
       </div>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      <div style={{ fontSize: 20, fontWeight: 800 }}>{value}</div>
     </div>
   );
 }
 
-export default App
+function Stat({ label, value, theme }) {
+  return (
+    <div style={{ borderRadius: 18, background: theme.soft, border: `1px solid ${theme.border}`, padding: 12 }}>
+      <div style={{ fontSize: 12, color: theme.muted }}>{label}</div>
+      <div style={{ marginTop: 6, fontSize: 18, fontWeight: 800 }}>{value}</div>
+    </div>
+  );
+}
+
+function ProgressBar({ value, theme }) {
+  return (
+    <div style={{ width: "100%", height: 8, borderRadius: 999, background: theme.secondary, overflow: "hidden" }}>
+      <div
+        style={{
+          width: `${Math.max(0, Math.min(100, value))}%`,
+          height: "100%",
+          borderRadius: 999,
+          background: theme.accent,
+          transition: "width 180ms ease",
+        }}
+      />
+    </div>
+  );
+}
+
+function TabButton({ active, onClick, children, theme }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        borderRadius: 16,
+        border: `1px solid ${active ? theme.accent : theme.border}`,
+        background: active ? theme.accent : theme.cardSolid,
+        color: active ? theme.accentText : theme.text,
+        padding: "12px 14px",
+        fontWeight: 700,
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function IconButton({ onClick, children, theme, ariaLabel }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      style={{
+        width: 42,
+        height: 42,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 16,
+        border: `1px solid ${theme.border}`,
+        background: theme.cardSolid,
+        color: theme.text,
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ActionButton({ children, onClick, disabled = false, variant = "primary", theme }) {
+  const background =
+    variant === "danger" ? theme.danger : variant === "secondary" ? theme.cardSolid : theme.accent;
+  const color =
+    variant === "danger" ? "#ffffff" : variant === "secondary" ? theme.text : theme.accentText;
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      style={{
+        width: "100%",
+        borderRadius: 18,
+        border: `1px solid ${variant === "secondary" ? theme.border : background}`,
+        background,
+        color,
+        padding: "14px 16px",
+        fontWeight: 700,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.45 : 1,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Pill({ children, theme, variant }) {
+  return (
+    <div
+      style={{
+        borderRadius: 999,
+        padding: "8px 12px",
+        fontSize: 12,
+        fontWeight: 700,
+        border: `1px solid ${theme.border}`,
+        background: variant === "secondary" ? theme.soft : theme.cardSolid,
+        color: theme.text,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function ToggleRow({ label, icon, checked, onCheckedChange, theme }) {
+  return (
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        borderRadius: 18,
+        border: `1px solid ${theme.border}`,
+        padding: 14,
+        cursor: "pointer",
+        background: theme.cardSolid,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+        {icon}
+        <span>{label}</span>
+      </div>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onCheckedChange(event.target.checked)}
+        style={{ width: 18, height: 18, accentColor: theme.accent }}
+      />
+    </label>
+  );
+}
+
+export default App;
