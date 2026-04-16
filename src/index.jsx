@@ -784,6 +784,12 @@ function MobileProfilePanel({
 }
 
 function App() {
+  useEffect(() => {
+    const link = document.querySelector("link[rel~='icon']") || document.createElement("link");
+    link.rel = "icon";
+    link.href = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📘</text></svg>";
+    document.head.appendChild(link);
+  }, []);
   const [progress, setProgress] = useState(() => getStoredValue(STORAGE_KEY, {}));
   const [unlockedCount, setUnlockedCount] = useState(() => {
     const stored = getStoredValue(`${STORAGE_KEY}-pool`, DEFAULT_POOL_SIZE);
@@ -971,7 +977,7 @@ function App() {
             marginBottom: 16,
           }}
         >
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, letterSpacing: "-0.03em" }}>Lexora</h1>
+          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, letterSpacing: "-0.03em" }}>Lexa</h1>
           {isMobile ? (
             <div style={{ position: "relative" }}>
               <IconButton onClick={() => setProfileOpen((value) => !value)} theme={theme} ariaLabel="Open profile">
@@ -1176,18 +1182,7 @@ function App() {
                     <Stat label="Current streak" value={currentWordStats.streak} theme={theme} />
                   </div>
                 </div>
-              </>
-            ) : (
-              <div style={panelStyle(theme, 24)}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-                  <Metric icon={<Flame size={16} />} label="Reviewed" value={overallStats.reviewed} theme={theme} />
-                  <Metric icon={<CheckCircle2 size={16} />} label="Accuracy" value={`${accuracyPct}%`} theme={theme} />
-                  <Metric icon={<Trophy size={16} />} label="Mastered" value={overallStats.mastered} theme={theme} />
-                  <Metric icon={<BarChart3 size={16} />} label="Studied" value={overallStats.studied} theme={theme} />
-                  <Metric icon={<Flame size={16} />} label="Pool" value={unlockedCount} theme={theme} />
-                </div>
-              </div>
-            )}
+              </>            ) : null}
 
             <div style={panelStyle(theme, 24)}>
               <h2 style={{ ...sectionTitleStyle, marginBottom: 16 }}>Controls</h2>
