@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { RotateCcw, CheckCircle2, Trophy, Flame, BarChart3 } from "lucide-react";
+import { RotateCcw, CheckCircle2, Trophy, Flame, BarChart3, User } from "lucide-react";
 
 const RAW_WORDS = `1|de|of
 2|ella|she
@@ -503,10 +503,10 @@ const RAW_WORDS = `1|de|of
 499|edad|age
 500|precio|price`;
 
-const STORAGE_KEY = "spanish-flashcards-vite-v4";
-const SETTINGS_KEY = "spanish-flashcards-settings-vite-v4";
+const STORAGE_KEY = "spanish-flashcards-vite-v6";
+const SETTINGS_KEY = "spanish-flashcards-settings-vite-v6";
 const DEFAULT_SETTINGS = {
-  direction: "both",
+  direction: "es-en",
   theme: "system",
 };
 
@@ -587,8 +587,7 @@ function buildPrompt(card, direction, seed) {
   if (direction === "en-es") {
     return { prompt: card.english, answer: card.spanish, label: "English → Spanish" };
   }
-  const useSpanishPrompt = seed % 2 === 0;
-  return useSpanishPrompt
+  return seed % 2 === 0
     ? { prompt: card.spanish, answer: card.english, label: "Spanish → English" }
     : { prompt: card.english, answer: card.spanish, label: "English → Spanish" };
 }
@@ -644,6 +643,25 @@ function useResolvedTheme(theme) {
   return resolvedTheme;
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const media = window.matchMedia("(max-width: 768px)");
+    const apply = () => setIsMobile(media.matches);
+    apply();
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", apply);
+      return () => media.removeEventListener("change", apply);
+    }
+    media.addListener(apply);
+    return () => media.removeListener(apply);
+  }, []);
+
+  return isMobile;
+}
+
 function panelStyle(theme, radius) {
   return {
     borderRadius: radius,
@@ -678,6 +696,82 @@ function selectStyle(theme) {
   };
 }
 
+function MobileProfilePanel({
+  theme,
+  profileView,
+  setProfileView,
+  settings,
+  setSettings,
+  overallStats,
+  accuracyPct,
+  currentWordStats,
+  masteryPct,
+}) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 52,
+        right: 0,
+        zIndex: 20,
+        width: 260,
+        ...panelStyle(theme, 20),
+        padding: 10,
+      }}
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 10 }}>
+        <TabButton active={profileView === "stats"} onClick={() => setProfileView("stats")} theme={theme}>Stats</TabButton>
+        <TabButton active={profileView === "setup"} onClick={() => setProfileView("setup")} theme={theme}>Setup</TabButton>
+      </div>
+      {profileView === "stats" ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+          <Stat label="Reviewed" value={overallStats.reviewed} theme={theme} />
+          <Stat label="Correct" value={overallStats.correct} theme={theme} />
+          <Stat label="Wrong" value={overallStats.wrong} theme={theme} />
+          <Stat label="Accuracy" value={`${accuracyPct}%`} theme={theme} />
+          <Stat label="Studied" value={overallStats.studied} theme={theme} />
+          <Stat label="Mastered" value={overallStats.mastered} theme={theme} />
+          <Stat label="Current streak" value={currentWordStats.streak} theme={theme} />
+          <Stat label="Current due" value={formatDueLabel(currentWordStats.dueAt)} theme={theme} />
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <div style={labelStyle(theme)}>Direction</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              <TabButton active={settings.direction === "es-en"} onClick={() => setSettings((state) => ({ ...state, direction: "es-en" }))} theme={theme}>ES → EN</TabButton>
+              <TabButton active={settings.direction === "en-es"} onClick={() => setSettings((state) => ({ ...state, direction: "en-es" }))} theme={theme}>EN → ES</TabButton>
+              <TabButton active={settings.direction === "both"} onClick={() => setSettings((state) => ({ ...state, direction: "both" }))} theme={theme}>Both</TabButton>
+            </div>
+          </div>
+          <div>
+            <div style={labelStyle(theme)}>Theme</div>
+            <select
+              value={settings.theme}
+              onChange={(event) => setSettings((state) => ({ ...state, theme: event.target.value }))}
+              style={selectStyle(theme)}
+            >
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+          <div style={{ borderRadius: 18, padding: 14, background: theme.soft, border: `1px solid ${theme.border}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: theme.muted, marginBottom: 8 }}>
+              <span>Mastery progress</span>
+              <span>{masteryPct}%</span>
+            </div>
+            <ProgressBar value={masteryPct} theme={theme} />
+            <div style={{ marginTop: 8, fontSize: 12, color: theme.muted }}>
+              {overallStats.mastered} of {words.length} words are currently in the mastered bucket.
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [progress, setProgress] = useState(() => getStoredValue(STORAGE_KEY, {}));
   const [settings, setSettings] = useState(() => ({ ...DEFAULT_SETTINGS, ...getStoredValue(SETTINGS_KEY, DEFAULT_SETTINGS) }));
@@ -685,8 +779,11 @@ function App() {
   const [cardSeed, setCardSeed] = useState(0);
   const [promptSeed, setPromptSeed] = useState(0);
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileView, setProfileView] = useState("stats");
   const lastCardIdRef = useRef(null);
   const resolvedTheme = useResolvedTheme(settings.theme);
+  const isMobile = useIsMobile();
   const theme = themeValues[resolvedTheme] || themeValues.light;
 
   useEffect(() => {
@@ -698,6 +795,12 @@ function App() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }, [settings]);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setProfileOpen(false);
+    }
+  }, [isMobile]);
 
   const overallStats = useMemo(() => {
     return words.reduce(
@@ -731,10 +834,7 @@ function App() {
       if (word.id === lastCardIdRef.current) {
         weight *= 0.2;
       }
-      return {
-        word,
-        weight,
-      };
+      return { word, weight };
     });
     return pickWeighted(pool)?.word || words[0];
   }, [progress, cardSeed]);
@@ -836,13 +936,44 @@ function App() {
       >
         <div
           style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 16,
+            marginBottom: 16,
+          }}
+        >
+          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, letterSpacing: "-0.03em" }}>Lexora</h1>
+          {isMobile ? (
+            <div style={{ position: "relative" }}>
+              <IconButton onClick={() => setProfileOpen((value) => !value)} theme={theme} ariaLabel="Open profile">
+                <User size={16} />
+              </IconButton>
+              {profileOpen ? (
+                <MobileProfilePanel
+                  theme={theme}
+                  profileView={profileView}
+                  setProfileView={setProfileView}
+                  settings={settings}
+                  setSettings={setSettings}
+                  overallStats={overallStats}
+                  accuracyPct={accuracyPct}
+                  currentWordStats={currentWordStats}
+                  masteryPct={masteryPct}
+                />
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        <div
+          style={{
             display: "grid",
-            gridTemplateColumns: "minmax(0, 1fr) 320px",
+            gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) 320px",
             gap: 16,
             alignItems: "start",
             marginBottom: 24,
           }}
-          className="main-grid"
         >
           <div style={{ ...panelStyle(theme, 28), paddingTop: 12 }}>
             <AnimatePresence mode="wait">
@@ -925,14 +1056,14 @@ function App() {
                       <div style={{ fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: theme.muted }}>
                         {revealed ? "Translation" : "Prompt"}
                       </div>
-                      <div style={{ fontSize: 48, lineHeight: 1.05, fontWeight: 800 }} className="card-word">
+                      <div style={{ fontSize: isMobile ? 38 : 48, lineHeight: 1.05, fontWeight: 800 }}>
                         {revealed ? promptPack.answer : promptPack.prompt}
                       </div>
                     </motion.div>
                   </AnimatePresence>
                 </motion.button>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }} className="grade-grid">
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 12 }}>
                   <ActionButton variant="danger" disabled={!revealed || isAdvancing} onClick={() => gradeCard("wrong")} theme={theme}>Wrong</ActionButton>
                   <ActionButton disabled={!revealed || isAdvancing} onClick={() => gradeCard("correct")} theme={theme}>Correct</ActionButton>
                 </div>
@@ -942,80 +1073,77 @@ function App() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             <div style={panelStyle(theme, 24)}>
-              <h2 style={{ ...sectionTitleStyle, marginBottom: 16 }}>Progress stats</h2>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-                <Stat label="Reviewed" value={overallStats.reviewed} theme={theme} />
-                <Stat label="Correct" value={overallStats.correct} theme={theme} />
-                <Stat label="Wrong" value={overallStats.wrong} theme={theme} />
-                <Stat label="Current streak" value={currentWordStats.streak} theme={theme} />
-                <Stat label="Current ease" value={currentWordStats.ease.toFixed(2)} theme={theme} />
-                <Stat label="Current due" value={formatDueLabel(currentWordStats.dueAt)} theme={theme} />
-              </div>
-            </div>
-
-            <div style={panelStyle(theme, 24)}>
               <h2 style={{ ...sectionTitleStyle, marginBottom: 16 }}>Controls</h2>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <ActionButton variant="secondary" onClick={skipCard} theme={theme} disabled={isAdvancing}>Skip this card</ActionButton>
                 <ActionButton variant="danger" onClick={resetProgress} theme={theme}>Reset all progress</ActionButton>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 1.2fr) minmax(280px, 360px)",
-            gap: 16,
-          }}
-          className="top-grid"
-        >
-          <div style={panelStyle(theme, 20)}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(88px, 1fr))", gap: 8 }} className="metric-grid">
-              <Metric icon={<Flame size={16} />} label="Reviewed" value={overallStats.reviewed} theme={theme} />
-              <Metric icon={<CheckCircle2 size={16} />} label="Accuracy" value={`${accuracyPct}%`} theme={theme} />
-              <Metric icon={<Trophy size={16} />} label="Mastered" value={overallStats.mastered} theme={theme} />
-              <Metric icon={<BarChart3 size={16} />} label="Studied" value={overallStats.studied} theme={theme} />
-            </div>
-          </div>
+            {!isMobile ? (
+              <>
+                <div style={panelStyle(theme, 24)}>
+                  <h2 style={{ ...sectionTitleStyle, marginBottom: 16 }}>Stats</h2>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+                    <Stat label="Reviewed" value={overallStats.reviewed} theme={theme} />
+                    <Stat label="Correct" value={overallStats.correct} theme={theme} />
+                    <Stat label="Wrong" value={overallStats.wrong} theme={theme} />
+                    <Stat label="Accuracy" value={`${accuracyPct}%`} theme={theme} />
+                    <Stat label="Studied" value={overallStats.studied} theme={theme} />
+                    <Stat label="Mastered" value={overallStats.mastered} theme={theme} />
+                    <Stat label="Current streak" value={currentWordStats.streak} theme={theme} />
+                    <Stat label="Current due" value={formatDueLabel(currentWordStats.dueAt)} theme={theme} />
+                  </div>
+                </div>
 
-          <div style={panelStyle(theme, 24)}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <h2 style={sectionTitleStyle}>Study setup</h2>
-              <div>
-                <div style={labelStyle(theme)}>Direction</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  <TabButton active={settings.direction === "es-en"} onClick={() => setSettings((state) => ({ ...state, direction: "es-en" }))} theme={theme}>ES → EN</TabButton>
-                  <TabButton active={settings.direction === "en-es"} onClick={() => setSettings((state) => ({ ...state, direction: "en-es" }))} theme={theme}>EN → ES</TabButton>
-                  <TabButton active={settings.direction === "both"} onClick={() => setSettings((state) => ({ ...state, direction: "both" }))} theme={theme}>Both</TabButton>
+                <div style={panelStyle(theme, 24)}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <h2 style={sectionTitleStyle}>Setup</h2>
+                    <div>
+                      <div style={labelStyle(theme)}>Direction</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                        <TabButton active={settings.direction === "es-en"} onClick={() => setSettings((state) => ({ ...state, direction: "es-en" }))} theme={theme}>ES → EN</TabButton>
+                        <TabButton active={settings.direction === "en-es"} onClick={() => setSettings((state) => ({ ...state, direction: "en-es" }))} theme={theme}>EN → ES</TabButton>
+                        <TabButton active={settings.direction === "both"} onClick={() => setSettings((state) => ({ ...state, direction: "both" }))} theme={theme}>Both</TabButton>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={labelStyle(theme)}>Theme</div>
+                      <select
+                        value={settings.theme}
+                        onChange={(event) => setSettings((state) => ({ ...state, theme: event.target.value }))}
+                        style={selectStyle(theme)}
+                      >
+                        <option value="system">System</option>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                      </select>
+                    </div>
+
+                    <div style={{ borderRadius: 18, padding: 14, background: theme.soft, border: `1px solid ${theme.border}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: theme.muted, marginBottom: 8 }}>
+                        <span>Mastery progress</span>
+                        <span>{masteryPct}%</span>
+                      </div>
+                      <ProgressBar value={masteryPct} theme={theme} />
+                      <div style={{ marginTop: 8, fontSize: 12, color: theme.muted }}>
+                        {overallStats.mastered} of {words.length} words are currently in the mastered bucket.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={panelStyle(theme, 24)}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
+                  <Metric icon={<Flame size={16} />} label="Reviewed" value={overallStats.reviewed} theme={theme} />
+                  <Metric icon={<CheckCircle2 size={16} />} label="Accuracy" value={`${accuracyPct}%`} theme={theme} />
+                  <Metric icon={<Trophy size={16} />} label="Mastered" value={overallStats.mastered} theme={theme} />
+                  <Metric icon={<BarChart3 size={16} />} label="Studied" value={overallStats.studied} theme={theme} />
                 </div>
               </div>
-
-              <div>
-                <div style={labelStyle(theme)}>Theme</div>
-                <select
-                  value={settings.theme}
-                  onChange={(event) => setSettings((state) => ({ ...state, theme: event.target.value }))}
-                  style={selectStyle(theme)}
-                >
-                  <option value="system">System</option>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </div>
-
-              <div style={{ borderRadius: 18, padding: 14, background: theme.soft, border: `1px solid ${theme.border}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: theme.muted, marginBottom: 8 }}>
-                  <span>Mastery progress</span>
-                  <span>{masteryPct}%</span>
-                </div>
-                <ProgressBar value={masteryPct} theme={theme} />
-                <div style={{ marginTop: 8, fontSize: 12, color: theme.muted }}>
-                  {overallStats.mastered} of {words.length} words are currently in the mastered bucket.
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -1023,14 +1151,6 @@ function App() {
       <style>{`
         * { box-sizing: border-box; }
         button, select, input { font: inherit; }
-        @media (max-width: 1024px) {
-          .top-grid, .main-grid { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 768px) {
-          .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; width: 100%; }
-          .grade-grid { grid-template-columns: 1fr !important; }
-          .card-word { font-size: 38px !important; }
-        }
       `}</style>
     </div>
   );
