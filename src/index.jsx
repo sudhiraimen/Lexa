@@ -503,13 +503,12 @@ const RAW_WORDS = `1|de|of
 499|edad|age
 500|precio|price`;
 
-const STORAGE_KEY = "spanish-flashcards-vite-v8";
-const SETTINGS_KEY = "spanish-flashcards-settings-vite-v8";
+const STORAGE_KEY = "spanish-flashcards-vite-v9";
+const SETTINGS_KEY = "spanish-flashcards-settings-vite-v9";
 const DEFAULT_SETTINGS = {
   direction: "es-en",
   theme: "system",
 };
-
 const DEFAULT_POOL_SIZE = 10;
 const DEFAULT_CHUNK_OPTIONS = [5, 10, 15, 20];
 
@@ -688,15 +687,90 @@ function selectStyle(theme) {
   };
 }
 
+function SetupPanel({ theme, settings, setSettings, unlockedCount, masteryPct, masteredCount, addChunk }) {
+  return (
+    <div style={panelStyle(theme, 24)}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Setup</h2>
+        <div>
+          <div style={labelStyle(theme)}>Direction</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+            <TabButton active={settings.direction === "es-en"} onClick={() => setSettings((state) => ({ ...state, direction: "es-en" }))} theme={theme}>ES → EN</TabButton>
+            <TabButton active={settings.direction === "en-es"} onClick={() => setSettings((state) => ({ ...state, direction: "en-es" }))} theme={theme}>EN → ES</TabButton>
+            <TabButton active={settings.direction === "both"} onClick={() => setSettings((state) => ({ ...state, direction: "both" }))} theme={theme}>Both</TabButton>
+          </div>
+        </div>
+        <div>
+          <div style={labelStyle(theme)}>Theme</div>
+          <select
+            value={settings.theme}
+            onChange={(event) => setSettings((state) => ({ ...state, theme: event.target.value }))}
+            style={selectStyle(theme)}
+          >
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+        <div style={{ borderRadius: 18, padding: 14, background: theme.soft, border: `1px solid ${theme.border}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: theme.muted, marginBottom: 8 }}>
+            <span>Learning pool</span>
+            <span>{unlockedCount} / {words.length}</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8, marginBottom: 10 }}>
+            {DEFAULT_CHUNK_OPTIONS.map((amount) => (
+              <ActionButton
+                key={amount}
+                variant="secondary"
+                theme={theme}
+                disabled={unlockedCount >= words.length}
+                onClick={() => addChunk(amount)}
+              >
+                +{amount}
+              </ActionButton>
+            ))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: theme.muted, marginBottom: 8 }}>
+            <span>Mastery progress</span>
+            <span>{masteryPct}%</span>
+          </div>
+          <ProgressBar value={masteryPct} theme={theme} />
+          <div style={{ marginTop: 8, fontSize: 12, color: theme.muted }}>
+            {masteredCount} of {unlockedCount} active words are currently in the mastered bucket.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatsPanel({ theme, stats, accuracyPct, currentStreak, unlockedCount }) {
+  return (
+    <div style={panelStyle(theme, 24)}>
+      <h2 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0" }}>Stats</h2>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+        <Stat label="Reviewed" value={stats.reviewed} theme={theme} />
+        <Stat label="Correct" value={stats.correct} theme={theme} />
+        <Stat label="Wrong" value={stats.wrong} theme={theme} />
+        <Stat label="Accuracy" value={`${accuracyPct}%`} theme={theme} />
+        <Stat label="Studied" value={stats.studied} theme={theme} />
+        <Stat label="Mastered" value={stats.mastered} theme={theme} />
+        <Stat label="Pool" value={unlockedCount} theme={theme} />
+        <Stat label="Current streak" value={currentStreak} theme={theme} />
+      </div>
+    </div>
+  );
+}
+
 function MobileProfilePanel({
   theme,
   profileView,
   setProfileView,
   settings,
   setSettings,
-  overallStats,
+  stats,
   accuracyPct,
-  currentWordStats,
+  currentStreak,
   masteryPct,
   unlockedCount,
   addChunk,
@@ -719,77 +793,31 @@ function MobileProfilePanel({
       </div>
       {profileView === "stats" ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-          <Stat label="Reviewed" value={overallStats.reviewed} theme={theme} />
-          <Stat label="Correct" value={overallStats.correct} theme={theme} />
-          <Stat label="Wrong" value={overallStats.wrong} theme={theme} />
+          <Stat label="Reviewed" value={stats.reviewed} theme={theme} />
+          <Stat label="Correct" value={stats.correct} theme={theme} />
+          <Stat label="Wrong" value={stats.wrong} theme={theme} />
           <Stat label="Accuracy" value={`${accuracyPct}%`} theme={theme} />
-          <Stat label="Studied" value={overallStats.studied} theme={theme} />
-          <Stat label="Mastered" value={overallStats.mastered} theme={theme} />
+          <Stat label="Studied" value={stats.studied} theme={theme} />
+          <Stat label="Mastered" value={stats.mastered} theme={theme} />
           <Stat label="Pool" value={unlockedCount} theme={theme} />
-          <Stat label="Current streak" value={currentWordStats.streak} theme={theme} />
+          <Stat label="Current streak" value={currentStreak} theme={theme} />
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <div style={labelStyle(theme)}>Direction</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-              <TabButton active={settings.direction === "es-en"} onClick={() => setSettings((state) => ({ ...state, direction: "es-en" }))} theme={theme}>ES → EN</TabButton>
-              <TabButton active={settings.direction === "en-es"} onClick={() => setSettings((state) => ({ ...state, direction: "en-es" }))} theme={theme}>EN → ES</TabButton>
-              <TabButton active={settings.direction === "both"} onClick={() => setSettings((state) => ({ ...state, direction: "both" }))} theme={theme}>Both</TabButton>
-            </div>
-          </div>
-          <div>
-            <div style={labelStyle(theme)}>Theme</div>
-            <select
-              value={settings.theme}
-              onChange={(event) => setSettings((state) => ({ ...state, theme: event.target.value }))}
-              style={selectStyle(theme)}
-            >
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </div>
-          <div style={{ borderRadius: 18, padding: 14, background: theme.soft, border: `1px solid ${theme.border}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: theme.muted, marginBottom: 8 }}>
-              <span>Learning pool</span>
-              <span>{unlockedCount} / {words.length}</span>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 10 }}>
-              {DEFAULT_CHUNK_OPTIONS.map((amount) => (
-                <ActionButton
-                  key={amount}
-                  variant="secondary"
-                  theme={theme}
-                  disabled={unlockedCount >= words.length}
-                  onClick={() => addChunk(amount)}
-                >
-                  +{amount} words
-                </ActionButton>
-              ))}
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: theme.muted, marginBottom: 8 }}>
-              <span>Mastery progress</span>
-              <span>{masteryPct}%</span>
-            </div>
-            <ProgressBar value={masteryPct} theme={theme} />
-            <div style={{ marginTop: 8, fontSize: 12, color: theme.muted }}>
-              {overallStats.mastered} of {unlockedCount} active words are currently in the mastered bucket.
-            </div>
-          </div>
-        </div>
+        <SetupPanel
+          theme={theme}
+          settings={settings}
+          setSettings={setSettings}
+          unlockedCount={unlockedCount}
+          masteryPct={masteryPct}
+          masteredCount={stats.mastered}
+          addChunk={addChunk}
+        />
       )}
     </div>
   );
 }
 
 function App() {
-  useEffect(() => {
-    const link = document.querySelector("link[rel~='icon']") || document.createElement("link");
-    link.rel = "icon";
-    link.href = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📘</text></svg>";
-    document.head.appendChild(link);
-  }, []);
   const [progress, setProgress] = useState(() => getStoredValue(STORAGE_KEY, {}));
   const [unlockedCount, setUnlockedCount] = useState(() => {
     const stored = getStoredValue(`${STORAGE_KEY}-pool`, DEFAULT_POOL_SIZE);
@@ -830,15 +858,15 @@ function App() {
 
   const activeWords = useMemo(() => words.slice(0, unlockedCount), [unlockedCount]);
 
-  const overallStats = useMemo(() => {
+  const stats = useMemo(() => {
     return activeWords.reduce(
       (accumulator, word) => {
-        const stats = { ...defaultStats(), ...(progress[word.id] || {}) };
-        if (stats.seen > 0) accumulator.reviewed += 1;
-        accumulator.correct += stats.correct;
-        accumulator.wrong += stats.wrong;
-        accumulator.studied += stats.correct + stats.wrong;
-        if (stats.streak >= 4) accumulator.mastered += 1;
+        const item = { ...defaultStats(), ...(progress[word.id] || {}) };
+        if (item.seen > 0) accumulator.reviewed += 1;
+        accumulator.correct += item.correct;
+        accumulator.wrong += item.wrong;
+        accumulator.studied += item.correct + item.wrong;
+        if (item.streak >= 4) accumulator.mastered += 1;
         return accumulator;
       },
       { reviewed: 0, correct: 0, wrong: 0, studied: 0, mastered: 0 }
@@ -846,17 +874,17 @@ function App() {
   }, [activeWords, progress]);
 
   const masteryPct = useMemo(() => {
-    return Math.round((overallStats.mastered / Math.max(activeWords.length, 1)) * 100);
-  }, [activeWords.length, overallStats.mastered]);
+    return Math.round((stats.mastered / Math.max(activeWords.length, 1)) * 100);
+  }, [activeWords.length, stats.mastered]);
 
   const currentCard = useMemo(() => {
     const now = Date.now();
     const pool = activeWords.map((word) => {
-      const stats = { ...defaultStats(), ...(progress[word.id] || {}) };
-      const dueBoost = stats.dueAt <= now ? 1.8 : 0.25;
-      const difficultyBoost = 1 + stats.wrong * 1.75 + Math.max(0, stats.seen - stats.correct) * 0.35;
-      const newBoost = stats.seen === 0 ? 2 : 1;
-      const masteryPenalty = Math.max(0.2, 1 - stats.streak * 0.08);
+      const item = { ...defaultStats(), ...(progress[word.id] || {}) };
+      const dueBoost = item.dueAt <= now ? 1.8 : 0.25;
+      const difficultyBoost = 1 + item.wrong * 1.75 + Math.max(0, item.seen - item.correct) * 0.35;
+      const newBoost = item.seen === 0 ? 2 : 1;
+      const masteryPenalty = Math.max(0.2, 1 - item.streak * 0.08);
       const rankBoost = 1 + (500 - word.rank) / 1200;
       let weight = dueBoost * difficultyBoost * newBoost * masteryPenalty * rankBoost;
       if (word.id === lastCardIdRef.current) {
@@ -880,9 +908,9 @@ function App() {
   }, [currentCard.id, progress]);
 
   const accuracyPct = useMemo(() => {
-    const total = overallStats.correct + overallStats.wrong;
-    return total ? Math.round((overallStats.correct / total) * 100) : 0;
-  }, [overallStats.correct, overallStats.wrong]);
+    const total = stats.correct + stats.wrong;
+    return total ? Math.round((stats.correct / total) * 100) : 0;
+  }, [stats.correct, stats.wrong]);
 
   const advanceCard = () => {
     setCardSeed((value) => value + 1);
@@ -947,12 +975,6 @@ function App() {
     setPromptSeed(0);
   };
 
-  const sectionTitleStyle = {
-    fontSize: 16,
-    fontWeight: 700,
-    margin: 0,
-  };
-
   return (
     <div
       style={{
@@ -990,9 +1012,9 @@ function App() {
                   setProfileView={setProfileView}
                   settings={settings}
                   setSettings={setSettings}
-                  overallStats={overallStats}
+                  stats={stats}
                   accuracyPct={accuracyPct}
-                  currentWordStats={currentWordStats}
+                  currentStreak={currentWordStats.streak}
                   masteryPct={masteryPct}
                   unlockedCount={unlockedCount}
                   addChunk={addChunk}
@@ -1013,179 +1035,119 @@ function App() {
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             <div style={{ ...panelStyle(theme, 28), paddingTop: 12 }}>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`${currentCard.id}-${promptPack.label}-${promptSeed}`}
-                initial={{ opacity: 0, y: 12, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -12, scale: 0.98 }}
-                transition={{ duration: 0.2 }}
-                style={{ display: "flex", flexDirection: "column", gap: 20 }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <Pill theme={theme} variant="secondary">{promptPack.label}</Pill>
-                    <Pill theme={theme} variant="outline">Rank #{currentCard.rank}</Pill>
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <IconButton onClick={skipCard} theme={theme} ariaLabel="Skip card" disabled={isAdvancing}>
-                      <RotateCcw size={16} />
-                    </IconButton>
-                  </div>
-                </div>
-
-                <motion.button
-                  type="button"
-                  onClick={() => {
-                    if (!isAdvancing) {
-                      setRevealed((value) => !value);
-                    }
-                  }}
-                  whileTap={{ scale: 0.995 }}
-                  style={{
-                    position: "relative",
-                    minHeight: 380,
-                    width: "100%",
-                    borderRadius: 28,
-                    border: `1px solid ${theme.border}`,
-                    background: `linear-gradient(135deg, ${theme.cardSolid} 0%, ${theme.soft} 100%)`,
-                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
-                    padding: 0,
-                    color: theme.text,
-                    cursor: isAdvancing ? "default" : "pointer",
-                  }}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`${currentCard.id}-${promptPack.label}-${promptSeed}`}
+                  initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ display: "flex", flexDirection: "column", gap: 20 }}
                 >
-                  <div
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Pill theme={theme} variant="secondary">{promptPack.label}</Pill>
+                      <Pill theme={theme} variant="outline">Rank #{currentCard.rank}</Pill>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <IconButton onClick={skipCard} theme={theme} ariaLabel="Skip card" disabled={isAdvancing}>
+                        <RotateCcw size={16} />
+                      </IconButton>
+                    </div>
+                  </div>
+
+                  <motion.button
+                    type="button"
+                    onClick={() => {
+                      if (!isAdvancing) {
+                        setRevealed((value) => !value);
+                      }
+                    }}
+                    whileTap={{ scale: 0.995 }}
                     style={{
-                      position: "absolute",
-                      top: 16,
-                      right: 16,
-                      zIndex: 2,
-                      borderRadius: 999,
+                      position: "relative",
+                      minHeight: 380,
+                      width: "100%",
+                      borderRadius: 28,
                       border: `1px solid ${theme.border}`,
-                      background: theme.card,
-                      padding: "6px 12px",
-                      fontSize: 12,
-                      color: theme.muted,
-                      backdropFilter: "blur(10px)",
+                      background: `linear-gradient(135deg, ${theme.cardSolid} 0%, ${theme.soft} 100%)`,
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+                      padding: 0,
+                      color: theme.text,
+                      cursor: isAdvancing ? "default" : "pointer",
                     }}
                   >
-                    {revealed ? "Tap to flip back" : "Tap to flip"}
-                  </div>
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.div
-                      key={revealed ? "back" : "front"}
-                      initial={{ rotateY: revealed ? -90 : 90, opacity: 0 }}
-                      animate={{ rotateY: 0, opacity: 1 }}
-                      exit={{ rotateY: revealed ? 90 : -90, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
+                    <div
                       style={{
-                        minHeight: 380,
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        textAlign: "center",
-                        padding: 48,
-                        gap: 12,
+                        position: "absolute",
+                        top: 16,
+                        right: 16,
+                        zIndex: 2,
+                        borderRadius: 999,
+                        border: `1px solid ${theme.border}`,
+                        background: theme.card,
+                        padding: "6px 12px",
+                        fontSize: 12,
+                        color: theme.muted,
+                        backdropFilter: "blur(10px)",
                       }}
                     >
-                      <div style={{ fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: theme.muted }}>
-                        {revealed ? "Translation" : "Prompt"}
-                      </div>
-                      <div style={{ fontSize: isMobile ? 38 : 48, lineHeight: 1.05, fontWeight: 800 }}>
-                        {revealed ? promptPack.answer : promptPack.prompt}
-                      </div>
-                    </motion.div>
-                  </AnimatePresence>
-                </motion.button>
+                      {revealed ? "Tap to flip back" : "Tap to flip"}
+                    </div>
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.div
+                        key={revealed ? "back" : "front"}
+                        initial={{ rotateY: revealed ? -90 : 90, opacity: 0 }}
+                        animate={{ rotateY: 0, opacity: 1 }}
+                        exit={{ rotateY: revealed ? 90 : -90, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        style={{
+                          minHeight: 380,
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          textAlign: "center",
+                          padding: 48,
+                          gap: 12,
+                        }}
+                      >
+                        <div style={{ fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: theme.muted }}>
+                          {revealed ? "Translation" : "Prompt"}
+                        </div>
+                        <div style={{ fontSize: isMobile ? 38 : 48, lineHeight: 1.05, fontWeight: 800 }}>
+                          {revealed ? promptPack.answer : promptPack.prompt}
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
+                  </motion.button>
 
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-                  <ActionButton variant="danger" disabled={isAdvancing} onClick={() => gradeCard("wrong")} theme={theme}>Wrong</ActionButton>
-                  <ActionButton disabled={isAdvancing} onClick={() => gradeCard("correct")} theme={theme}>Correct</ActionButton>
-                </div>
-              </motion.div>
-            </AnimatePresence>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+                    <ActionButton variant="danger" disabled={isAdvancing} onClick={() => gradeCard("wrong")} theme={theme}>Wrong</ActionButton>
+                    <ActionButton disabled={isAdvancing} onClick={() => gradeCard("correct")} theme={theme}>Correct</ActionButton>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
             </div>
 
             {!isMobile ? (
-              <div style={panelStyle(theme, 24)}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <h2 style={sectionTitleStyle}>Setup</h2>
-                  <div>
-                    <div style={labelStyle(theme)}>Direction</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                      <TabButton active={settings.direction === "es-en"} onClick={() => setSettings((state) => ({ ...state, direction: "es-en" }))} theme={theme}>ES → EN</TabButton>
-                      <TabButton active={settings.direction === "en-es"} onClick={() => setSettings((state) => ({ ...state, direction: "en-es" }))} theme={theme}>EN → ES</TabButton>
-                      <TabButton active={settings.direction === "both"} onClick={() => setSettings((state) => ({ ...state, direction: "both" }))} theme={theme}>Both</TabButton>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={labelStyle(theme)}>Theme</div>
-                    <select
-                      value={settings.theme}
-                      onChange={(event) => setSettings((state) => ({ ...state, theme: event.target.value }))}
-                      style={selectStyle(theme)}
-                    >
-                      <option value="system">System</option>
-                      <option value="light">Light</option>
-                      <option value="dark">Dark</option>
-                    </select>
-                  </div>
-
-                  <div style={{ borderRadius: 18, padding: 14, background: theme.soft, border: `1px solid ${theme.border}` }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: theme.muted, marginBottom: 8 }}>
-                      <span>Learning pool</span>
-                      <span>{unlockedCount} / {words.length}</span>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8, marginBottom: 10 }}>
-                      {DEFAULT_CHUNK_OPTIONS.map((amount) => (
-                        <ActionButton
-                          key={amount}
-                          variant="secondary"
-                          theme={theme}
-                          disabled={unlockedCount >= words.length}
-                          onClick={() => addChunk(amount)}
-                        >
-                          +{amount}
-                        </ActionButton>
-                      ))}
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: theme.muted, marginBottom: 8 }}>
-                      <span>Mastery progress</span>
-                      <span>{masteryPct}%</span>
-                    </div>
-                    <ProgressBar value={masteryPct} theme={theme} />
-                    <div style={{ marginTop: 8, fontSize: 12, color: theme.muted }}>
-                      {overallStats.mastered} of {unlockedCount} active words are currently in the mastered bucket.
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <SetupPanel
+                theme={theme}
+                settings={settings}
+                setSettings={setSettings}
+                unlockedCount={unlockedCount}
+                masteryPct={masteryPct}
+                masteredCount={stats.mastered}
+                addChunk={addChunk}
+              />
             ) : null}
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            {!isMobile ? (
-              <>
-                <div style={panelStyle(theme, 24)}>
-                  <h2 style={{ ...sectionTitleStyle, marginBottom: 16 }}>Stats</h2>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-                    <Stat label="Reviewed" value={overallStats.reviewed} theme={theme} />
-                    <Stat label="Correct" value={overallStats.correct} theme={theme} />
-                    <Stat label="Wrong" value={overallStats.wrong} theme={theme} />
-                    <Stat label="Accuracy" value={`${accuracyPct}%`} theme={theme} />
-                    <Stat label="Studied" value={overallStats.studied} theme={theme} />
-                    <Stat label="Mastered" value={overallStats.mastered} theme={theme} />
-                    <Stat label="Pool" value={unlockedCount} theme={theme} />
-                    <Stat label="Current streak" value={currentWordStats.streak} theme={theme} />
-                  </div>
-                </div>
-              </>            ) : null}
+            {!isMobile ? <StatsPanel theme={theme} stats={stats} accuracyPct={accuracyPct} currentStreak={currentWordStats.streak} unlockedCount={unlockedCount} /> : null}
 
             <div style={panelStyle(theme, 24)}>
-              <h2 style={{ ...sectionTitleStyle, marginBottom: 16 }}>Controls</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px 0" }}>Controls</h2>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <ActionButton variant="secondary" onClick={skipCard} theme={theme} disabled={isAdvancing}>Skip this card</ActionButton>
                 <ActionButton variant="danger" onClick={resetProgress} theme={theme}>Reset all progress</ActionButton>
